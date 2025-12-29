@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from typing import Annotated
+from fastapi import FastAPI, Query
 
 from constants.modelName import ModelName
+from models.Item import Item
 
 
 app = FastAPI()
@@ -57,6 +59,97 @@ async def read_file(file_path: str):
 
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+
+@app.post("/items/create")
+async def create_item(item: Item):
+    return item
+
+
+@app.post("/items/create_item_another")
+async def create_item_another(item: Item):
+    item_dict = item.model_dump()
+    print(item_dict)
+    return item_dict
+
+
+@app.post("/items/create_item_another/{item_id}")
+async def create_item_another_1(item: Item, item_id: int):
+    item_dict = item.model_dump()
+    print(item_dict)
+    return {"item_id": item_id, **item_dict}
+
+
+@app.put("/items/update/{item_id}")
+async def update_item(item_id: int, item: Item, q: str | None = None):
+    result = {"item_id": item_id, **item.model_dump()}
+    if q:
+        result.update({"q": q})
+    return result
+
+
+@app.get("/items/get/")
+async def get_item(q: Annotated[str | None, Query(max_length=50)] = None):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+
+
+@app.get("/items/get_new/")
+async def get_new_item(
+    q: str | None = Query(default=None, min_length=3, max_length=50)
+):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+
+
+@app.get("/items/get_list/")
+async def get_list(q: Annotated[list[str] | None, Query()] = None):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+
+
+@app.get("/items/get_list_another/")
+async def get_list_another(q: list[str] | None = Query()):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+
+
+@app.get("/items/read_items_another/")
+async def read_items_another(
+    q: Annotated[
+        list[int],
+        Query(
+            title="这个是用来测试输入 带int的列表的",
+            description="请输入至少3个字符进行搜索",
+        ),
+    ] = [],
+):
+    query_items = {"q": q}
+    return query_items
+
+
+@app.get("/items/read_items_with_alias/")
+async def read_items_with_alias(
+    q: Annotated[
+        list[str] | None,
+        Query(
+            alias="item-query",
+            include_in_schema=False,
+        ),
+    ] = None,
+):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
 
 
 if __name__ == "__main__":
