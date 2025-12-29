@@ -1,5 +1,7 @@
+import random
 from typing import Annotated
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Path, Query
+from pydantic import AfterValidator
 
 from constants.modelName import ModelName
 from models.Item import Item
@@ -147,6 +149,40 @@ async def read_items_with_alias(
     ] = None,
 ):
     results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+
+
+data = {
+    "isbn-9781529046137": "The Hitchhiker's Guide to the Galaxy",
+    "imdb-tt0371724": "The Hitchhiker's Guide to the Galaxy",
+    "isbn-9781439512982": "Isaac Asimov: The Complete Stories, Vol. 2",
+}
+
+
+def check_valid_id(id: str):
+    if not id.startswith(("isbn-", "imdb-")):
+        raise ValueError("错了")
+    return id
+
+
+@app.get("/items/check_valid_id/")
+async def read_items_check_valid_id(
+    id: Annotated[str | None, AfterValidator(check_valid_id)] = None,
+):
+    if id:
+        item = data.get(id)
+    else:
+        id, item = random.choice(list(data.items()))
+    return {"id": id, "item": item}
+
+
+@app.get("/newItem/{item_id}")
+async def read_item_newItem(
+    *, item_id: int = Path(title="The ID of the item to get", eq=1), q: str
+):
+    results = {"item_id": item_id}
     if q:
         results.update({"q": q})
     return results
